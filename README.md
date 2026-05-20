@@ -156,7 +156,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🗺️ Planned Extensions
+## Planned Extensions
 
 - [ ] [x] Full benchmark vs. SIFT, PolyPhen-2, CADD — completed
 - [ ] Ablation study: remove positional features to isolate k-mer contribution
@@ -165,7 +165,7 @@ pip install -r requirements.txt
 
 ---
 
-## 📄 Citation
+## Citation
 
 If you use this code or data in your work, please cite:
 
@@ -189,7 +189,7 @@ If you use this code or data in your work, please cite:
 
 ---
 
-## 📬 Contact
+## Contact
 
 **Bilal Zaib**  
 Department of Microbiology  
@@ -198,7 +198,7 @@ Abdul Wali Khan University Mardan (AWKUM), Lower Dir, KP, Pakistan
 
 ---
 
-## 🔓 License
+## License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
