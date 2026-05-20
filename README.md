@@ -10,17 +10,17 @@ Machine learning-based classification of TP53 gene mutations using ClinVar datas
 
 ---
 
-## 🔬 Overview
+## Overview
 
 TP53 is mutated in approximately **50% of all human cancers**, yet reliably separating pathogenic from benign variants within ClinVar remains an unresolved bottleneck in clinical oncology. This repository provides a **gene-specific, biologically informed Random Forest classifier** trained on 1,470 ClinVar-curated TP53 single nucleotide variants (SNVs) to predict variant pathogenicity.
 
 Unlike genome-wide tools (SIFT, PolyPhen-2, CADD), this model is built exclusively for TP53, allowing it to exploit the strong spatial clustering of oncogenic mutations within the DNA-binding domain — a signal that is typically diluted in genome-wide models.
 
-> ⚠️ **This model is intended for research use only and does not constitute a clinical diagnostic tool.**
+> **This model is intended for research use only and does not constitute a clinical diagnostic tool.**
 
 ---
 
-## 📊 Performance Summary
+## Performance Summary
 
 | Metric | Value |
 |---|---|
@@ -36,7 +36,7 @@ Evaluated on a stratified held-out test set of **294 variants** (20% of total da
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 TP53_Mutation_Classification/
@@ -70,7 +70,7 @@ TP53_Mutation_Classification/
 
 ---
 
-## 🧬 Methods Summary
+## Methods Summary
 
 ### Data Source
 - **ClinVar** (April 2026): `TP53[gene] AND single nucleotide variant[variant type]`
@@ -90,7 +90,7 @@ TP53_Mutation_Classification/
 
 ---
 
-## ⚙️ How to Reproduce
+## How to Reproduce
 
 ### 1. Clone the repository
 ```bash
@@ -116,7 +116,7 @@ Or run on **Google Colab** (recommended — no local setup required):
 
 ---
 
-## 📦 Requirements
+## Requirements
 
 ```
 python>=3.10
@@ -136,7 +136,7 @@ pip install -r requirements.txt
 
 ---
 
-## 📈 Key Findings
+## Key Findings
 
 - **Relative genomic position** and **codon position** were the two strongest predictors (Gini importance ~0.10 and ~0.04), consistent with the known spatial clustering of oncogenic TP53 mutations in the DNA-binding domain (codons 102–292).
 - **DNA-binding domain membership** ranked 3rd–4th in feature importance.
@@ -145,11 +145,11 @@ pip install -r requirements.txt
 
 ---
 
-## ⚠️ Limitations
+## Limitations
 
 1. Trained on a **single ClinVar snapshot** (April 2026) — performance on future submissions is unverified.
 2. **1,269 VUS records (46.3%)** were excluded — performance on ambiguous variants is unknown.
-3. Full benchmark against SIFT, PolyPhen-2, and CADD on the complete test set was **not performed** (partial PolyPhen-2 benchmark on 88 TAD1 variants only).
+3. Benchmark comparison was conducted against CADD v1.6 (n=121, AUC=0.9511), SIFT (n=37, AUC=0.9857), and PolyPhen-2 HDIV (n=37, AUC=0.8738) on matched variant subsets.
 4. **Protein structural features** (AlphaFold-derived) were not included.
 5. Germline and somatic variants were **not stratified**.
 6. South Asian cancer cohorts are **underrepresented in ClinVar**, limiting direct applicability to Pakistani patient populations.
@@ -158,7 +158,7 @@ pip install -r requirements.txt
 
 ## 🗺️ Planned Extensions
 
-- [ ] Full benchmark vs. SIFT, PolyPhen-2, CADD on 294-variant test set
+- [ ] [x] Full benchmark vs. SIFT, PolyPhen-2, CADD — completed
 - [ ] Ablation study: remove positional features to isolate k-mer contribution
 - [ ] Prospective validation on variants reclassified in ClinVar after April 2026
 - [ ] Integration of AlphaFold structural features (solvent accessibility, stability)
@@ -170,13 +170,20 @@ pip install -r requirements.txt
 If you use this code or data in your work, please cite:
 
 ```bibtex
-@article{zaib2026tp53,
+@article{Zaib et al TP53},
   title   = {AI-Based Classification of TP53 Gene Mutations Using Random Forest and ClinVar: 
              A Gene-Specific Approach with Biological Feature Integration},
-  author  = {Zaib, Bilal},
-  journal = {[Journal Name]},
+  @article{zaib2026tp53,
+  author  = {Zaib, Bilal and Jan, Syed Waleed and 
+             Begum, Khaist and Jamal, Muhsin and 
+             Sajidurahman},
+  journal = {International Journal of Molecular Sciences},
   year    = {2026},
-  note    = {Preprint / Under Review}
+  note    = {Under Review}
+}
+  journal = {International Journal of Molecular Science (IJMS)},
+  year    = {2026},
+  note    = {Submitted / Under Review}
 }
 ```
 
