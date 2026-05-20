@@ -42,15 +42,15 @@ Evaluated on a stratified held-out test set of **294 variants** (20% of total da
 TP53_Mutation_Classification/
 │
 ├── data/
-│   └── clinvar_tp53_snv_april2026.tsv   # ClinVar download (TP53 SNVs, April 2026)
+│   └── clinvar_tp53_snv_april2026.tsv   ## ClinVar download (TP53 SNVs, April 2026)
 │
 ├── notebooks/
-│   └── TP53_RF_Classifier.ipynb         # Full pipeline: retrieval → features → training → evaluation
+│   └── TP53_RF_Classifier.ipynb         ## Full pipeline: retrieval → features → training → evaluation
 │
 ├── src/
-│   ├── feature_extraction.py            # k-mer + biological feature engineering
-│   ├── train_model.py                   # Random Forest training script
-│   └── evaluate_model.py                # Metrics, ROC, PR curves, feature importance
+│   ├── feature_extraction.py            ## k-mer + biological feature engineering
+│   ├── train_model.py                   ## Random Forest training script
+│   └── evaluate_model.py                ## Metrics, ROC, PR curves, feature importance
 │
 ├── figures/
 │   ├── feature_importance.png
