@@ -1,205 +1,234 @@
-# TP53-Mutation-Classication
-Machine learning-based classification of TP53 gene mutations using ClinVar dataset and Random Forest with biological feature integration.
 # TP53 Mutation Classification Using Machine Learning
 
-# TP53 Mutation Classification — Random Forest Classifier
-
 > **AI-Based Classification of TP53 Gene Mutations Using Random Forest and ClinVar: A Gene-Specific Approach with Biological Feature Integration**
->
-> Bilal Zaib · Department of Microbiology, Abdul Wali Khan University Mardan (AWKUM), Lower Dir, KP, Pakistan
+
+Machine learning-based classification of TP53 single nucleotide variants using a biologically informed Random Forest classifier trained on expert-curated ClinVar data.
+
+> **Research use only. Not intended for clinical diagnosis.**
 
 ---
 
-## Overview
+# Overview
 
-TP53 is mutated in approximately **50% of all human cancers**, yet reliably separating pathogenic from benign variants within ClinVar remains an unresolved bottleneck in clinical oncology. This repository provides a **gene-specific, biologically informed Random Forest classifier** trained on 1,470 ClinVar-curated TP53 single nucleotide variants (SNVs) to predict variant pathogenicity.
+TP53 is altered in approximately half of all human cancers, yet distinguishing pathogenic from benign variants remains a major challenge in clinical genomics.
 
-Unlike genome-wide tools (SIFT, PolyPhen-2, CADD), this model is built exclusively for TP53, allowing it to exploit the strong spatial clustering of oncogenic mutations within the DNA-binding domain — a signal that is typically diluted in genome-wide models.
+This repository contains a gene-specific Random Forest classifier trained exclusively on TP53 variants. Unlike genome-wide pathogenicity predictors, this model integrates local sequence context together with biologically meaningful features including codon position, functional domain membership, hotspot status, genomic location, and nucleotide substitution information.
 
-> **This model is intended for research use only and does not constitute a clinical diagnostic tool.**
+The complete workflow is fully reproducible using open-source software and Google Colab.
 
 ---
 
-## Performance Summary
+# Dataset
+
+Source:
+
+- NCBI ClinVar (April 2026)
+- Query:
+  TP53[gene] AND single nucleotide variant[variant type]
+
+Downloaded variants:
+
+- Total variants: **2,739**
+- Included variants: **1,470**
+- Excluded VUS/conflicting variants: **1,269**
+
+Binary labels:
+
+- Pathogenic / Likely Pathogenic → 1
+- Benign / Likely Benign → 0
+
+Reference transcript:
+
+NM_000546.6
+
+---
+
+# Feature Engineering
+
+Total features: **276**
+
+Sequence features (256)
+
+- Trinucleotide k-mer frequencies
+- Tetranucleotide k-mer frequencies
+- 101 bp sequence window (±50 bp)
+
+Biological features (20)
+
+- Codon position
+- Relative genomic position
+- Functional domain membership
+- Hotspot status
+- Reference nucleotide
+- Alternate nucleotide
+- Nucleotide substitution type
+
+---
+
+# Machine Learning Model
+
+Classifier:
+
+RandomForestClassifier
+
+Parameters
+
+- 200 trees
+- class_weight="balanced"
+- min_samples_split=3
+- random_state=42
+
+Evaluation
+
+- 80/20 stratified train/test split
+- Five-fold stratified cross-validation
+- Independent held-out test set
+
+---
+
+# Performance
 
 | Metric | Value |
-|---|---|
-| AUC-ROC (test set) | **0.9327** |
-| AUPRC (test set) | **0.8303** |
-| Cross-validation AUC (5-fold) | **0.9106 ± 0.0184** |
-| Specificity | 0.9481 |
-| Sensitivity | 0.6829 |
-| PPV | 0.8358 |
-| NPV | 0.8855 |
+|---------|-------|
+| Test AUC-ROC | **0.9183** |
+| Test AUPRC | **0.8359** |
+| Five-fold CV AUC | **0.9002 ± 0.0232** |
+| Sensitivity | **0.6951** |
+| Specificity | **0.9481** |
+| PPV | **0.8382** |
+| NPV | **0.8894** |
 
-Evaluated on a stratified held-out test set of **294 variants** (20% of total dataset).
+Held-out test set:
+
+**294 TP53 variants**
 
 ---
 
-## Repository Structure
+# Comparative Benchmark
+
+The classifier was compared against **CADD v1.7** using only variants confirmed to belong to the independent held-out test set.
+
+| Tool | AUC |
+|------|------|
+| Random Forest | **0.9183** |
+| CADD v1.7 | **0.7560** |
+
+Benchmark performed on **31 matched test-set variants**.
+
+SIFT and PolyPhen-2 were not quantitatively compared because too few matched test variants were available for reliable AUC estimation.
+
+---
+
+# Repository Structure
 
 ```
-TP53_Mutation_Classification/
-│
+TP53-Mutation-Classification/
+
 ├── data/
-│   └── clinvar_tp53_snv_april2026.tsv    ClinVar download (TP53 SNVs, April 2026)
-│
 ├── notebooks/
-│   └── TP53_RF_Classifier.ipynb          Full pipeline: retrieval → features → training → evaluation
-│
 ├── src/
-│   ├── feature_extraction.py             k-mer + biological feature engineering
-│   ├── train_model.py                    Random Forest training script
-│   └── evaluate_model.py                 Metrics, ROC, PR curves, feature importance
-│
 ├── figures/
-│   ├── feature_importance.png
-│   ├── roc_pr_curves.png
-│   ├── confusion_matrix.png
-│   ├── domain_distribution.png
-│   ├── cv_auc_folds.png
-│   ├── hotspot_vs_nonhotspot.png
-│   └── probability_distribution.png
-│
 ├── results/
-│   └── performance_metrics.csv           All evaluation metrics (Tables 2 & 3 from paper)
-│
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Methods Summary
+# Installation
 
-### Data Source
-- **ClinVar** (April 2026): `TP53[gene] AND single nucleotide variant[variant type]`
-- 2,739 total records downloaded; **1,470 retained** after excluding VUS/conflicting labels
-- Labels: Pathogenic/Likely Pathogenic → `1`; Benign/Likely Benign → `0`
-- Reference sequence: **NM_000546.6** (NCBI, retrieved via Biopython Entrez)
-
-### Features (276 total)
-- **256 sequence features** — trinucleotide and tetranucleotide k-mer frequencies from a ±50 bp window around each variant (scikit-learn `CountVectorizer`)
-- **20 biological features** — codon position, relative genomic location, 7 functional domain memberships (one-hot), hotspot status (6 canonical codons: R175, G245, R248, R249, R273, R282), reference nucleotide, alternative nucleotide, nucleotide change identity
-
-### Model
-- `RandomForestClassifier` (scikit-learn v1.3)
-- 200 estimators, `min_samples_split=3`, `class_weight='balanced'`
-- 80/20 stratified train/test split (`random_state=42`)
-- 5-fold stratified cross-validation on training partition
-
----
-
-## How to Reproduce
-
-### 1. Clone the repository
 ```bash
-git clone https://github.com/YOUR_USERNAME/TP53_Mutation_Classification.git
-cd TP53_Mutation_Classification
-```
+git clone https://github.com/bilalzaib2134-gif/TP53-Mutation-Classification.git
 
-### 2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
+cd TP53-Mutation-Classification
 
-### 3. Run the full pipeline
-Open and run the notebook end-to-end:
-```bash
-jupyter notebook notebooks/TP53_RF_Classifier.ipynb
-```
-Or run on **Google Colab** (recommended — no local setup required):
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/TP53_Mutation_Classification/blob/main/notebooks/TP53_RF_Classifier.ipynb)
-
-> All random seeds are fixed at `42` throughout. Results are fully reproducible.
-
----
-
-## Requirements
-
-```
-python>=3.10
-scikit-learn==1.3
-pandas==2.0
-numpy==1.24
-biopython==1.81
-matplotlib==3.7
-seaborn==0.12
-jupyter
-```
-
-Install with:
-```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-## Key Findings
+# Running
 
-- **Relative genomic position** and **codon position** were the two strongest predictors (Gini importance ~0.10 and ~0.04), consistent with the known spatial clustering of oncogenic TP53 mutations in the DNA-binding domain (codons 102–292).
-- **DNA-binding domain membership** ranked 3rd–4th in feature importance.
-- Top informative k-mers: tetranucleotides `CTGA`, `CTGT` and trinucleotide `CGA` — reflecting enrichment of specific sequence states in pathogenic regions.
-- High specificity (94.8%) makes the model suited for **variant triage** tasks, where minimizing false positives is practically valuable.
+Open
 
----
+```
+notebooks/TP53_RF_Classifier.ipynb
+```
 
-## Limitations
+Run every notebook cell sequentially.
 
-1. Trained on a **single ClinVar snapshot** (April 2026) — performance on future submissions is unverified.
-2. **1,269 VUS records (46.3%)** were excluded — performance on ambiguous variants is unknown.
-3. Benchmark comparison was conducted against CADD v1.6 (n=121, AUC=0.9511), SIFT (n=37, AUC=0.9857), and PolyPhen-2 HDIV (n=37, AUC=0.8738) on matched variant subsets.
-4. **Protein structural features** (AlphaFold-derived) were not included.
-5. Germline and somatic variants were **not stratified**.
-6. South Asian cancer cohorts are **underrepresented in ClinVar**, limiting direct applicability to Pakistani patient populations.
+All analyses are fully reproducible.
 
----
+Random seed:
 
-## Planned Extensions
-
-- [ ] [x] Full benchmark vs. SIFT, PolyPhen-2, CADD — completed
-- [ ] Ablation study: remove positional features to isolate k-mer contribution
-- [ ] Prospective validation on variants reclassified in ClinVar after April 2026
-- [ ] Integration of AlphaFold structural features (solvent accessibility, stability)
+```
+42
+```
 
 ---
 
-## Citation
+# Key Findings
 
-If you use this code or data in your work, please cite:
+- Relative genomic position was the strongest predictor.
+- Codon position ranked second.
+- DNA-binding domain membership was highly informative.
+- Sequence k-mer features contributed additional discriminatory information.
+- The TP53-specific classifier outperformed the genome-wide CADD predictor on the independent benchmark.
+
+---
+
+# Limitations
+
+- Single ClinVar snapshot (April 2026)
+- Variants of uncertain significance were excluded
+- CADD benchmark restricted to 31 matched held-out variants
+- AlphaFold structural features not included
+- Germline and somatic variants not separated
+- Limited representation of South Asian populations
+
+---
+
+# Future Work
+
+- Ablation study removing positional features
+- Larger benchmark against external predictors
+- Validation using future ClinVar releases
+- Integration of AlphaFold-derived structural features
+
+---
+
+# Citation
 
 ```bibtex
-@article{Zaib et al TP53},
-  title   = {AI-Based Classification of TP53 Gene Mutations Using Random Forest and ClinVar: 
-             A Gene-Specific Approach with Biological Feature Integration},
-  @article{zaib2026tp53,
-  author  = {Zaib, Bilal and Jan, Syed Waleed and 
-             Begum, Khaist and Jamal, Muhsin and 
-             Sajidurahman},
+@article{zaib2026tp53,
+  author = {Bilal Zaib and Syed Waleed Jan and Khaist Begum and Muhsin Jamal and Sajid ur Rahman},
+  title = {AI-Based Classification of TP53 Gene Mutations Using Random Forest and ClinVar: A Gene-Specific Approach with Biological Feature Integration},
   journal = {International Journal of Molecular Sciences},
-  year    = {2026},
-  note    = {Under Review}
-}
-  journal = {International Journal of Molecular Science (IJMS)},
-  year    = {2026},
-  note    = {Submitted / Under Review}
+  year = {2026},
+  note = {Submitted / Under Review}
 }
 ```
 
 ---
 
-## Contact
+# Contact
 
-**Bilal Zaib**  
-Department of Microbiology  
-Abdul Wali Khan University Mardan (AWKUM), Lower Dir, KP, Pakistan  
-📧 bilalzaib.microbio@gmail.com
+Bilal Zaib
+
+Department of Microbiology
+
+Abdul Wali Khan University Mardan
+
+Pakistan
+
+Email:
+
+bilalzaib.microbio@gmail.com
 
 ---
 
-## License
+# License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+MIT License
 
-Data sourced from NCBI ClinVar is publicly available and governed by [NCBI's data usage policies](https://www.ncbi.nlm.nih.gov/home/about/policies/).
+The ClinVar dataset is publicly available from NCBI and remains subject to NCBI data usage policies.
