@@ -106,129 +106,78 @@ Held-out test set:
 
 # Comparative Benchmark
 
-The classifier was compared against **CADD v1.7** using only variants confirmed to belong to the independent held-out test set.
+The classifier was compared against **CADD v1.7** on the complete 294-variant held-out test set. Genomic coordinates were submitted directly to the CADD GRCh38-v1.7 web server, with coordinate identity confirmed by index-verified matching against the original dataset prior to score retrieval.
 
-| Tool | AUC |
-|------|------|
-| Random Forest | **0.9183** |
-| CADD v1.7 | **0.7560** |
+| Tool | AUC-ROC | Sensitivity | Specificity | n |
+|------|---------|-------------|-------------|---|
+| **This Model (RF)** | **0.9183** | **0.6951** | **0.9481** | **294** |
+| CADD v1.7 (PHRED ≥ 25) | 0.9814 | 0.7195 | 0.9953 | 294 |
 
-Benchmark performed on **31 matched test-set variants**.
+CADD's performance is highly threshold-dependent:
 
-SIFT and PolyPhen-2 were not quantitatively compared because too few matched test variants were available for reliable AUC estimation.
+| PHRED threshold | Sensitivity | Specificity |
+|------------------|-------------|--------------|
+| ≥ 20 | 0.9512 | 0.9623 |
+| ≥ 25 | 0.7195 | 0.9953 |
+| ≥ 30 | 0.3049 | 1.0000 |
 
----
+The RF classifier, calibrated at a single fixed threshold of 0.5, achieves performance comparable to CADD at its PHRED 25 operating point without requiring threshold selection.
 
-# Repository Structure
-
-```
-TP53-Mutation-Classification/
-
-├── data/
-├── notebooks/
-├── src/
-├── figures/
-├── results/
-├── requirements.txt
-└── README.md
-```
+SIFT and PolyPhen-2 annotation coverage within the held-out test set was insufficient for reliable AUC estimation (fewer than 10 matched variants with severe class imbalance) and are not reported quantitatively.
 
 ---
 
-# Installation
+# Data Availability Note
 
-```bash
-git clone https://github.com/bilalzaib2134-gif/TP53-Mutation-Classification.git
+CADD scores are not redistributed in this repository per CADD's terms of use. To reproduce the benchmark:
 
-cd TP53-Mutation-Classification
-
-pip install -r requirements.txt
-```
-
----
-
-# Running
-
-Open
-
-```
-notebooks/TP53_RF_Classifier.ipynb
-```
-
-Run every notebook cell sequentially.
-
-All analyses are fully reproducible.
-
-Random seed:
-
-```
-42
-```
-
----
-
-# Key Findings
-
-- Relative genomic position was the strongest predictor.
-- Codon position ranked second.
-- DNA-binding domain membership was highly informative.
-- Sequence k-mer features contributed additional discriminatory information.
-- The TP53-specific classifier outperformed the genome-wide CADD predictor on the independent benchmark.
+1. Run `notebooks/extract_test_vcf.ipynb` to generate the held-out test-set VCF from the trained model's exact 80/20 split (`random_state=42`).
+2. Submit the VCF to the [CADD scoring server](https://cadd.gs.washington.edu/score), selecting GRCh38-v1.7.
+3. Download the scored TSV and run `notebooks/cadd_benchmark.ipynb` to merge scores against test-set labels and reproduce the AUC, sensitivity, and specificity reported above.
 
 ---
 
 # Limitations
 
-- Single ClinVar snapshot (April 2026)
-- Variants of uncertain significance were excluded
-- CADD benchmark restricted to 31 matched held-out variants
-- AlphaFold structural features not included
-- Germline and somatic variants not separated
-- Limited representation of South Asian populations
+- Trained on a single ClinVar snapshot (April 2026); performance on subsequently reclassified variants is unknown.
+- Variants of uncertain significance (46.3% of downloaded entries) were excluded and are not covered by reported performance.
+- Germline and somatic variants were not distinguished during training.
+- South Asian populations are substantially underrepresented in ClinVar, limiting direct applicability to underrepresented patient cohorts.
+- This model is a research triage tool and is not validated for clinical diagnostic use.
 
 ---
 
-# Future Work
+# Reproducibility
 
-- Ablation study removing positional features
-- Larger benchmark against external predictors
-- Validation using future ClinVar releases
-- Integration of AlphaFold-derived structural features
+All analyses were performed in Google Colab using Python 3.12.
+
+Dependencies:
+
+- scikit-learn 1.3.2
+- pandas 2.1.4
+- numpy 1.26.4
+- biopython 1.81
+- matplotlib 3.7.2
+- seaborn 0.12.2
+
+Random seed fixed at 42 throughout all stochastic operations.
 
 ---
 
 # Citation
 
-```bibtex
-@article{zaib2026tp53,
-  author = {Bilal Zaib and Syed Waleed Jan and Khaist Begum and Muhsin Jamal and Sajid ur Rahman},
-  title = {AI-Based Classification of TP53 Gene Mutations Using Random Forest and ClinVar: A Gene-Specific Approach with Biological Feature Integration},
-  journal = {International Journal of Molecular Sciences},
-  year = {2026},
-  note = {Submitted / Under Review}
-}
-```
+If you use this work, please cite:
 
----
-
-# Contact
-
-Bilal Zaib
-
-Department of Microbiology
-
-Abdul Wali Khan University Mardan
-
-Pakistan
-
-Email:
-
-bilalzaib.microbio@gmail.com
+Zaib, B.; Jan, S.W.; Begum, K.; Jamal, M.; Rahman, S. AI-Based Classification of TP53 Gene Mutations Using Random Forest and ClinVar: A Gene-Specific Approach with Biological Feature Integration. *Int. J. Mol. Sci.* (in review).
 
 ---
 
 # License
 
-MIT License
+This repository is released under the MIT License. ClinVar data is publicly available under NCBI's data use policies.
 
-The ClinVar dataset is publicly available from NCBI and remains subject to NCBI data usage policies.
+---
+
+# Contact
+
+For questions regarding this repository, contact the corresponding authors listed in the associated manuscript.
