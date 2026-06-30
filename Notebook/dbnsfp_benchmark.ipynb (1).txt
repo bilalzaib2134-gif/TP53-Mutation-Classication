@@ -1,0 +1,226 @@
+{
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.12"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5,
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# dbNSFP Benchmark (ClinPred, SIFT, PolyPhen-2) \u2014 TP53 Missense Subset",
+    "",
+    "Reproduces the dbNSFP v4 comparison reported in Table 4 of the manuscript. SIFT and PolyPhen-2 only score missense variants, so this benchmark is restricted to the 72 missense variants within the 294-variant held-out test set (45 pathogenic, 27 benign). Scores are retrieved live via the myvariant.info API \u2014 no file download required. Requires `clinvar_result.txt` in the working directory."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Rebuild dataset, test split, and identify the missense subset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd",
+    "from sklearn.model_selection import train_test_split",
+    "",
+    "df_raw = pd.read_csv('clinvar_result.txt', sep='\\t')",
+    "",
+    "keep_labels = [",
+    "    'Pathogenic', 'Likely pathogenic', 'Pathogenic/Likely pathogenic',",
+    "    'Pathogenic/Likely pathogenic/Pathogenic, low penetrance',",
+    "    'Benign', 'Likely benign', 'Likely benign/Benign', 'Benign/Likely benign'",
+    "]",
+    "df_raw_filtered = df_raw[df_raw['Germline classification'].isin(keep_labels)].reset_index(drop=True)",
+    "",
+    "pathogenic_set = {'Pathogenic', 'Likely pathogenic', 'Pathogenic/Likely pathogenic',",
+    "                   'Pathogenic/Likely pathogenic/Pathogenic, low penetrance'}",
+    "df = df_raw_filtered.copy()",
+    "df['label'] = df['Germline classification'].apply(lambda x: 1 if x in pathogenic_set else 0)",
+    "assert len(df) == 1470, \"Row count mismatch \u2014 stop and recheck the ClinVar export\"",
+    "",
+    "_, X_test_df, _, _ = train_test_split(",
+    "    df, df['label'], test_size=0.2, random_state=42, stratify=df['label']",
+    ")",
+    "test_indices = X_test_df.index",
+    "print(f\"Test set size: {len(test_indices)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "test_consequence = df_raw_filtered.loc[test_indices, ['Canonical SPDI', 'Molecular consequence', 'Protein change']].copy()",
+    "test_consequence['label'] = df.loc[test_indices, 'label'].values",
+    "",
+    "missense_mask = test_consequence['Molecular consequence'].str.contains('missense', case=False, na=False)",
+    "missense_subset = test_consequence[missense_mask].copy()",
+    "",
+    "print(f\"Missense variants in test set: {len(missense_subset)}\")",
+    "print(f\"Pathogenic: {(missense_subset['label']==1).sum()} | Benign: {(missense_subset['label']==0).sum()}\")",
+    "",
+    "def build_hgvs(spdi):",
+    "    parts = spdi.split(':')",
+    "    pos_1based = int(parts[1]) + 1",
+    "    return f\"chr17:g.{pos_1based}{parts[2]}>{parts[3]}\"",
+    "",
+    "missense_subset['hgvs'] = missense_subset['Canonical SPDI'].apply(build_hgvs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Query dbNSFP v4 via myvariant.info",
+    "",
+    "SIFT and PolyPhen-2 in dbNSFP report one score per annotated transcript isoform. TP53 has ~20 isoforms with non-aligned score arrays, so a conservative worst-case rule (most damaging prediction across all transcripts) is applied \u2014 see manuscript Section 3.4 for the stated caveat this introduces. ClinPred returns a single calibrated score with no transcript ambiguity."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import requests",
+    "import time",
+    "",
+    "def worst_sift(pred_list):",
+    "    if not pred_list:",
+    "        return None",
+    "    return 'D' if 'D' in pred_list else 'T'",
+    "",
+    "def worst_polyphen(pred_list):",
+    "    if not pred_list:",
+    "        return None",
+    "    if 'D' in pred_list:",
+    "        return 'D'",
+    "    if 'P' in pred_list:",
+    "        return 'P'",
+    "    return 'B'",
+    "",
+    "fields = (\"dbnsfp.sift.pred,dbnsfp.polyphen2.hdiv.pred,\"",
+    "          \"dbnsfp.clinpred.pred,dbnsfp.clinpred.score\")",
+    "",
+    "records = []",
+    "missing = []",
+    "",
+    "for idx, row in missense_subset.iterrows():",
+    "    hgvs = row['hgvs']",
+    "    url = f\"https://myvariant.info/v1/variant/{hgvs}\"",
+    "    try:",
+    "        r = requests.get(url, params={\"fields\": fields, \"assembly\": \"hg38\"}, timeout=10)",
+    "        data = r.json()",
+    "        dbnsfp = data.get('dbnsfp', {})",
+    "",
+    "        sift_preds = dbnsfp.get('sift', {}).get('pred', [])",
+    "        if isinstance(sift_preds, str):",
+    "            sift_preds = [sift_preds]",
+    "",
+    "        polyphen_preds = dbnsfp.get('polyphen2', {}).get('hdiv', {}).get('pred', [])",
+    "        if isinstance(polyphen_preds, str):",
+    "            polyphen_preds = [polyphen_preds]",
+    "",
+    "        clinpred = dbnsfp.get('clinpred', {})",
+    "",
+    "        records.append({",
+    "            'hgvs': hgvs,",
+    "            'label': row['label'],",
+    "            'sift_pred': worst_sift(sift_preds),",
+    "            'polyphen_pred': worst_polyphen(polyphen_preds),",
+    "            'clinpred_pred': clinpred.get('pred'),",
+    "            'clinpred_score': clinpred.get('score'),",
+    "            'has_dbnsfp': bool(dbnsfp)",
+    "        })",
+    "        if not dbnsfp:",
+    "            missing.append(hgvs)",
+    "",
+    "    except Exception as e:",
+    "        records.append({'hgvs': hgvs, 'label': row['label'], 'error': str(e)})",
+    "        missing.append(hgvs)",
+    "",
+    "    time.sleep(0.1)",
+    "",
+    "results_df = pd.DataFrame(records)",
+    "print(f\"Total queried: {len(results_df)}\")",
+    "print(f\"Missing/no dbNSFP data: {len(missing)} {missing}\")",
+    "print()",
+    "print(results_df['sift_pred'].value_counts(dropna=False))",
+    "print()",
+    "print(results_df['polyphen_pred'].value_counts(dropna=False))",
+    "print()",
+    "print(results_df['clinpred_pred'].value_counts(dropna=False))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Compute AUC (ClinPred) and sensitivity/specificity (SIFT, PolyPhen-2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np",
+    "from sklearn.metrics import roc_auc_score, confusion_matrix",
+    "",
+    "# --- ClinPred: continuous score, real AUC ---",
+    "clinpred_df = results_df.dropna(subset=['clinpred_score'])",
+    "y_true_cp = clinpred_df['label'].values",
+    "y_score_cp = clinpred_df['clinpred_score'].values",
+    "auc_cp = roc_auc_score(y_true_cp, y_score_cp)",
+    "y_pred_cp = (clinpred_df['clinpred_pred'] == 'D').astype(int)",
+    "tn, fp, fn, tp = confusion_matrix(y_true_cp, y_pred_cp).ravel()",
+    "print(f\"ClinPred: n={len(clinpred_df)}, AUC={auc_cp:.4f}, Sens={tp/(tp+fn):.4f}, Spec={tn/(tn+fp):.4f}\")",
+    "print()",
+    "",
+    "# --- SIFT: categorical only ---",
+    "sift_df = results_df.dropna(subset=['sift_pred'])",
+    "y_true_s = sift_df['label'].values",
+    "y_pred_s = (sift_df['sift_pred'] == 'D').astype(int)",
+    "tn, fp, fn, tp = confusion_matrix(y_true_s, y_pred_s).ravel()",
+    "print(f\"SIFT: n={len(sift_df)}, Sens={tp/(tp+fn):.4f}, Spec={tn/(tn+fp):.4f}\")",
+    "print()",
+    "",
+    "# --- PolyPhen-2: two conventions ---",
+    "pp_df = results_df.dropna(subset=['polyphen_pred'])",
+    "y_true_p = pp_df['label'].values",
+    "",
+    "y_pred_p_strict = (pp_df['polyphen_pred'] == 'D').astype(int)",
+    "tn, fp, fn, tp = confusion_matrix(y_true_p, y_pred_p_strict).ravel()",
+    "print(f\"PolyPhen-2 (D only = pathogenic): n={len(pp_df)}, Sens={tp/(tp+fn):.4f}, Spec={tn/(tn+fp):.4f}\")",
+    "",
+    "y_pred_p_broad = (pp_df['polyphen_pred'].isin(['D','P'])).astype(int)",
+    "tn, fp, fn, tp = confusion_matrix(y_true_p, y_pred_p_broad).ravel()",
+    "print(f\"PolyPhen-2 (D+P = pathogenic): n={len(pp_df)}, Sens={tp/(tp+fn):.4f}, Spec={tn/(tn+fp):.4f}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Expected output:** ClinPred n=72, AUC=0.9802, Sens=0.9778, Spec=0.7778. SIFT n=70, Sens=1.0000, Spec=0.4074. PolyPhen-2 (D only) n=70, Sens=0.9302, Spec=0.6667. SIFT and PolyPhen-2 results carry the transcript-aggregation caveat described in manuscript Section 3.4 and should be read as exploratory."
+   ]
+  }
+ ]
+}
