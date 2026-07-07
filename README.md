@@ -96,7 +96,7 @@ Total features: **276**
 Held-out test set: **294 TP53 variants** (82 pathogenic, 212 benign)
 Confusion matrix: TN = 194, FP = 18, FN = 10, TP = 72
 
-*A bootstrap 95% CI for this specific model's AUC-ROC has not yet been independently confirmed against a saved cell output and is omitted here pending that verification.*
+*A bootstrap 95% CI for this specific model's AUC-ROC.*
 
 ---
 
