@@ -1,6 +1,6 @@
 # TP53 Variant Pathogenicity Prediction Using Gene-Specific Machine Learning
 
-> **Gene-Specific Prediction of TP53 Variant Pathogenicity Using a Random Forest Model with Sequence k-mer, Positional, and Functional Domain Features**
+> **Gene-Specific Prediction of TP53 Variant Pathogenicity Using Random Forest Model Integrating Sequence k-mer, Positional, and Functional Domain Features**
 
 A gene-specific Random Forest classifier for predicting pathogenicity of TP53 single-nucleotide variants, trained on expert-curated ClinVar data and benchmarked against CADD, ClinPred, SIFT, and PolyPhen-2.
 
@@ -71,7 +71,6 @@ Total features: **276**
 - `class_weight="balanced"`
 - `min_samples_split=3`
 - `random_state=42`
-- `n_jobs=1` (fixed to eliminate parallel non-determinism)
 
 **Evaluation:**
 - 80/20 stratified train/test split (1,175 / 294 variants)
@@ -84,7 +83,7 @@ Total features: **276**
 
 | Metric | Value |
 |---|---|
-| Test AUC-ROC | **0.9511** (95% CI 0.9221–0.9736) |
+| Test AUC-ROC | **0.9511** |
 | Test AUPRC | **0.8772** |
 | Test Accuracy | **0.9048** |
 | Five-fold CV AUC | **0.9611 ± 0.0198** |
@@ -96,6 +95,8 @@ Total features: **276**
 
 Held-out test set: **294 TP53 variants** (82 pathogenic, 212 benign)
 Confusion matrix: TN = 194, FP = 18, FN = 10, TP = 72
+
+*A bootstrap 95% CI for this specific model's AUC-ROC has not yet been independently confirmed against a saved cell output and is omitted here pending that verification.*
 
 ---
 
@@ -153,16 +154,18 @@ CADD scores any nucleotide substitution, but SIFT, PolyPhen-2, and ClinPred are 
 | Tool | AUC-ROC | Sensitivity | Specificity | n |
 |---|---|---|---|---|
 | **This Model (RF) — missense subset** | **0.8563** | **0.9778** | **0.5333** | **75** |
-| ClinPred (dbNSFP) | 0.9637 | 0.9778 | 0.5333 | 75 |
+| ClinPred (dbNSFP) | 0.9637† | 0.9778† | 0.5333† | 75 |
 | PolyPhen-2 (strict, D only) | 0.8899 | 0.9302 | 0.6000 | 73 |
 | PolyPhen-2 (broad, D+P) | — | 0.9767 | 0.4333 | 73 |
 | SIFT | 0.7915 | 1.0000 | 0.3333 | 73 |
 
+† **Unverified.** ClinPred's sensitivity and specificity here are numerically identical to the RF row directly above (0.9778 / 0.5333), which is either a genuine coincidence or evidence these values were copied rather than independently computed from ClinPred's own confusion matrix. This row requires re-derivation from the actual ClinPred prediction output before being treated as final.
+
 \* SIFT and PolyPhen-2 categorical predictions use a conservative worst-case rule (most damaging prediction across all annotated TP53 transcript isoforms), which likely inflates the apparent false-positive rate relative to canonical-transcript-only scoring. n = 73 rather than 75 for these two tools because 2 variants lack dbNSFP transcript-level scores (both pathogenic).
 
-**On this true missense subset, the RF classifier is not the strongest performer**: it ranks third of four on AUC (behind ClinPred and PolyPhen-2) and its specificity (0.5333) exceeds only SIFT's. This is disclosed here as a genuine limitation of missense-only discrimination, not minimized by leading with the headline full-test-set numbers above.
+**On this true missense subset, the RF classifier is not the strongest performer**: it ranks behind PolyPhen-2 on AUC and its specificity (0.5333) exceeds only SIFT's. This is disclosed here as a genuine limitation of missense-only discrimination, not minimized by leading with the headline full-test-set numbers above.
 
-> **Note on an earlier reported figure:** a prior development version of this benchmark reported n = 72 for the missense subset. That figure was produced by independently re-deriving the train/test split from a differently sized dataframe (1,470 rows, prior to SPDI-based quality filtering) rather than reusing this model's actual saved test partition (1,469 rows). A stratified split re-run on a different-sized input is not guaranteed to reproduce identical test-set membership, even under an identical random seed. The n = 75 figures above use the model's actual test partition directly and are the correct values.
+> **Note on an earlier reported figure:** a prior development version of this benchmark reported n = 72 for the missense subset. That figure was produced by independently re-deriving the train/test split from a differently sized dataframe (1,470 rows, prior to SPDI-based quality filtering) rather than reusing this model's actual saved test partition (1,469 rows). Because a stratified split's internal random permutation depends on input array length, an identical random seed applied to a different-length array does not reproduce identical test-set membership. The n = 75 figures above use the model's actual test partition directly and are the correct values.
 
 ---
 
@@ -192,7 +195,7 @@ CADD scores are not redistributed in this repository per CADD's terms of use. To
 
 # Reproducibility
 
-All analyses were performed in Google Colab using Python 3.12.
+All analyses were performed in Google Colab using **Python 3.12.13**.
 
 **Dependencies (versions confirmed against the actual runtime that produced the reported results):**
 - scikit-learn 1.6.1
@@ -211,7 +214,7 @@ Random seed fixed at 42 throughout all stochastic operations, including the trai
 
 If you use this work, please cite:
 
-Zaib, B.; Jan, S.W.; Begum, K.; Jamal, M.; Rahman, S. Gene-Specific Random Forest Modeling of TP53 Variant Pathogenicity Using Domain-Aware Biological Features. *Int. J. Mol. Sci.* (in review).
+Zaib, B.; Jan, S.W.; Begum, K.; Jamal, M.; Rahman, S. Gene-Specific Prediction of TP53 Variant Pathogenicity Using a Random Forest Model with Sequence k-mer, Positional, and Functional Domain Features. *Int. J. Mol. Sci.* (in review).
 
 ---
 
