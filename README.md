@@ -1,6 +1,6 @@
 # TP53 Variant Pathogenicity Prediction Using Gene-Specific Machine Learning
 
-> **Gene-Specific Prediction of TP53 Variant Pathogenicity Using Random Forest Model Integrating Sequence k-mer, Positional, and Functional Domain Features**
+> **Gene-Specific Random Forest Prediction of TP53 Variant Pathogenicity From Sequence and Biological Features**
 
 A gene-specific Random Forest classifier for predicting pathogenicity of TP53 single-nucleotide variants, trained on expert-curated ClinVar data and benchmarked against CADD, ClinPred, SIFT, and PolyPhen-2.
 
